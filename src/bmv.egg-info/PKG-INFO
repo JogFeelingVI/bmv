@@ -1,3 +1,13 @@
+Metadata-Version: 2.4
+Name: bmv
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: typer>=0.27.0
+Dynamic: license-file
+
 # BMV (Batch Move / Rename)
 
 **BMV** 是一款现代化、安全、基于管道链的终端批量文件重命名与整理工具。
