@@ -135,6 +135,14 @@ bmv undo
 
 ---
 
-## 📄 开源协议
+## 📄 开源与商业授权协议 (License)
 
-本项目采用 [MIT License](LICENSE) 开源协议。
+本项目采用 **双重授权模式 (Dual Licensing)**：
+
+1. **开源与非商业使用**：
+   本项目开源部分采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE) 开源协议。个人用户、教育机构以及开源项目可以免费使用、学习和修改。
+
+2. **商业授权 (Commercial License)**：
+   如果你希望将本项目的代码用于**商业产品、闭源软件、公司内部盈利性业务**，或不希望受 AGPL-3.0 强传染性开源条款限制，请联系作者购买商业授权。
+
+* 📧 商业授权与咨询邮箱：`glifelse@gmail.com`
