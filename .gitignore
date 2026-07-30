@@ -30,3 +30,4 @@ Temporary Items
 # python
 *.pyc
 __pycache__/
+*.egg-info/
