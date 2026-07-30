@@ -29,3 +29,4 @@ Temporary Items
 
 # python
 *.pyc
+__pycache__/
