@@ -1,4 +1,5 @@
 import glob
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -19,14 +20,47 @@ app = typer.Typer(
 )
 console = Console()
 
+def resolve_targets(patterns: list[str]) -> list[Path]:
+    """
+    解析传入的 patterns，兼顾：
+    1. Shell 展开后的具体文件列表 (例如: file1.mkv file2.mkv)
+    2. 带引号未展开的 Glob 通配符 (例如: "*.mkv", "./**/*.mp4")
+    3. 支持用户目录 '~' 的展开
+    """
+    matched_files: list[Path] = []
+    seen = set()
 
-@app.callback(invoke_without_command=True)
+    for pat in patterns:
+        # 展平波浪号 '~'
+        expanded_pat = os.path.expanduser(pat)
+
+        # 如果包含 Glob 通配符
+        if any(char in expanded_pat for char in ["*", "?", "["]):
+            for p in glob.glob(expanded_pat, recursive=True):
+                path = Path(p).resolve()
+                if path.is_file() and path not in seen:
+                    seen.add(path)
+                    matched_files.append(path)
+        else:
+            # 普通文件路径（Shell 自动展开的情况）
+            path = Path(expanded_pat).resolve()
+            if path.exists() and path.is_file() and path not in seen:
+                seen.add(path)
+                matched_files.append(path)
+
+    return matched_files
+
+@app.callback(invoke_without_command=True, context_settings={"allow_interspersed_args": True})
 def main(
     ctx: typer.Context,
     pattern: Annotated[
-        str | None,
+        list[str] | None,
         typer.Argument(help="目标文件匹配模式 (支持 Glob 通配符，如 './videos/*.mp4')", show_default=False),
     ] = None,
+    list_files: Annotated[
+        bool,
+        typer.Option("--list", "-l", help="仅展示匹配到的文件列表，不执行变换与重命名"),
+    ] = False,
     delete: Annotated[
         list[str] | None,
         typer.Option("--delete", "-d", help="需要删除的字符串或词组"),
@@ -63,6 +97,31 @@ def main(
         console.print(ctx.get_help())
         raise typer.Exit()
 
+    # if pattern and ("--list" in pattern or "-l" in pattern):
+    #     list_files = True
+    #     pattern = [p for p in pattern if p not in ("--list", "-l")]
+    # 🚨 3. 新增：拦截 `bmv undo` 命令，直接触发 undo 逻辑
+    if pattern and pattern == ["undo"]:
+        undo_cmd()
+        raise typer.Exit()
+
+    matched_paths = resolve_targets(pattern)
+    # 🚨 新增拦截判断：如果没有匹配到任何文件，明确提示并退出！
+    if not matched_paths:
+        console.print("[bold red]❌ 未找到任何匹配的文件，请检查路径是否正确！[/bold red]")
+        raise typer.Exit(code=1)
+
+    if list_files:
+        table = Table(title=f"📁 匹配的文件列表 (共 {len(matched_paths)} 个)")
+        table.add_column("序号", justify="right", style="cyan", no_wrap=True)
+        table.add_column("文件名", style="bold green")
+
+        for idx, f in enumerate(matched_paths, 1):
+            table.add_row(str(idx), f.name)
+
+        console.print(table)
+        raise typer.Exit()  # 打印完直接退出，不进入重命名逻辑
+
     # 1. 构建管道变换链
     pipeline = core.Pipeline()
     if delete:
@@ -73,12 +132,6 @@ def main(
         pipeline.add_transformer(core.make_case_transformer(case.lower()))
     if prefix or suffix:
         pipeline.add_transformer(core.make_affix_transformer(prefix, suffix))
-
-    # 2. 通过 Glob 规则筛选文件
-    matched_paths = [Path(p) for p in glob.glob(pattern, recursive=True) if Path(p).is_file()]
-    if not matched_paths:
-        console.print(f"[yellow]未找到匹配模式 '[bold]{pattern}[/bold]' 的文件。[/yellow]")
-        return
 
     # 3. 产生重命名动作列表
     actions = []
@@ -106,7 +159,7 @@ def main(
     table.add_column("目标文件名", style="green")
 
     for action in transaction.actions:
-        table.add_row(str(action.original_path), action.target_path.name)
+        table.add_row(str(action.original_path.name), action.target_path.name)
 
     console.print(table)
 

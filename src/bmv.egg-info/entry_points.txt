@@ -1,2 +1,2 @@
 [console_scripts]
-nomo = bmv.cli:app
+bmv = bmv.cli:app

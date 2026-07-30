@@ -173,13 +173,22 @@ class UndoJournal:
             logger.error(err_msg)
             return 0, [err_msg]
 
-        reversed_actions = [
-            RenameAction(
-                original_path=Path(item["target"]),
-                target_path=Path(item["original"]),
-            )
-            for item in data
-        ]
+        # 🚨 关键修复 1：兼容 json 文件中单条记录 (dict) 与多条记录 (list) 的情况
+        if isinstance(data, dict):
+            data = [data]
+
+        try:
+            reversed_actions = [
+                RenameAction(
+                    original_path=Path(item["target"]),
+                    target_path=Path(item["original"]),
+                )
+                for item in data
+            ]
+        except (KeyError, TypeError) as e:
+            err_msg = f"历史记录数据结构异常: {e}"
+            logger.error(err_msg)
+            return 0, [err_msg]
 
         # 校验后逆向执行
         tx = Transaction(reversed_actions)
