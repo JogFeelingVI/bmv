@@ -1,19 +1,20 @@
 # BMV (Batch Move / Rename)
 
-**BMV** 是一款现代化、安全、基于管道链的终端批量文件重命名与整理工具。
+**BMV** 是一款高效、安全、基于 Rich 终端可视化的批量文件重命名与标准化整理工具。
 
-摒弃了传统批量重命名工具繁琐、不可靠且容易误操作的缺陷，BMV 引入了**默认安全预览**、**管道链式变换**与**事务级撤销 (Undo)** 机制，让文件批量整理变得高效、直观且绝无后顾之忧。
+BMV 提供了 **字符串/正则替换**、**连结风格转换**、**行业规范预设** 以及 **随机混淆/哈希重命名** 等核心功能，结合对比表格、冲突警告面板与实时进度条，让批量文件整理变得直观、精准且安全。
 
 ---
 
 ## ✨ 特性亮点
 
-* 🛡️ **安全第一（默认预览模式）**：未指定 `--save` 时，系统绝不修改磁盘，仅以美观的对比表格展示预估结果，杜绝误操作。
-* 🔗 **管道化变换链 (Pipeline)**：支持将“删除词组”、“字符替换”、“大小写转换”、“添加前后缀”等规则自由组合，按顺序精准链式处理。
-* 🔄 **一键撤销 (Undo)**：内置历史日志管理器，即使执行了错误重命名，只需一行 `bmv undo` 即可秒级还原磁盘状态。
-* 🔍 **原生 Glob 通配符支持**：完美支持 `*.mp4`、`./videos/**/*.mkv` 等通配符，无需繁琐地分割路径与类型参数。
-* ⚡ **前置事务校验 (Pre-flight Check)**：改名执行前自动检测“目标路径冲突”、“重名覆盖”及“文件不存在”等风险，保证操作的原子安全性。
-* 🎨 **优雅的终端可视化**：基于 [Typer](https://typer.tiangolo.com/) 和 [Rich](https://github.com/Textualize/rich) 构建，提供高颜值、易读的彩色对照表格。
+* 🔤 **字符串与正则表达式替换**：支持快速子串替换或基于正则表达式的复杂匹配替换。
+* 🏢 **行业规范预设 & 连结风格转换**：
+  * 支持 `kebab-case`、`snake_case`、`camelCase`、`PascalCase` 常见连结风格转换。
+  * 内置媒体影音 (`media`)、工程建设 (`eng`)、财务行政 (`fin`)、学术论文 (`academic`) 行业标准化命名模板。
+* 🎲 **随机混淆与安全重命名**：支持 `uuid`、文件内容 `hash` (MD5) 及 `short` 随机字符混淆，满足隐私保护与唯一性需求。
+* 👀 **安全预览与交互确认**：提供 `--dry-run` 预览模式与 `-y / --confirm` 交互确认，防止误操作。
+* 🎨 **Rich 终端可视化**：包含 Rich 交互表格、高亮命名冲突警告面板（Panel）及批量处理进度条（Progress）。
 
 ---
 
@@ -26,112 +27,122 @@
 
 ### 方法一：使用 pipx 安装（推荐 🌟）
 
-[pipx](https://pypa.github.io/pipx/) 是 Python 社区推荐的独立的 CLI 工具安装器，它会将 BMV 安装在隔离的环境中，避免污染系统的 Python 全局依赖。
-
-#### 1. 从远程 GitHub 仓库直接安装：
 ```bash
-pipx install git+https://github.com/your-username/bmv.git
-```
-
-#### 2. 从本地源码安装：
-```bash
-git clone https://github.com/your-username/bmv.git
+# 从本地源码安装
+git clone https://github.com/feelingvi/bmv.git
 cd bmv
 pipx install .
 ```
 
-> **提示**：如果未安装 `pipx`，可以通过 `pip install pipx` 或系统包管理器（如 `brew install pipx` / `apt install pipx`）进行安装，并运行 `pipx ensurepath` 配置环境变量。
-
----
-
 ### 方法二：使用标准 pip 安装
 
-如果你倾向于使用标准的 `pip` 或在虚拟环境中运行：
-
 ```bash
-git clone https://github.com/your-username/bmv.git
+git clone https://github.com/feelingvi/bmv.git
 cd bmv
 
-# 普通安装
-pip install .
-
-# 或以可编辑模式（Editable Mode）安装（推荐开发者使用）
+# 以可编辑模式安装（开发者推荐）
 pip install -e .
 ```
 
-安装完成后，直接在终端中输入 `bmv --help` 验证是否安装成功。
+安装完成后，在终端中输入 `bmv --help` 验证是否成功。
 
 ---
 
-## 🚀 快速上手
+## 🚀 快速上手与使用示例
 
-### 1. 批量清理文件名广告词（默认安全预览）
-不加 `--save` 时，BMV 仅以彩色表格预览变更，不会对文件进行实际改名：
+### 1. 🔤 字符串与正则表达式替换 (`bmv replace`)
 
+#### 示例 1.1：普通文本替换（仅预览）
+将 `./downloads` 目录下所有文件中的 `[BD]` 替换为空格，不实际修改磁盘：
 ```bash
-bmv "./downloads/*.mkv" -d "【高清广告】" "www.example.com"
+bmv replace -p ./downloads -f "[BD]" -r " " --dry-run
 ```
 
-### 2. 结合替换与加前缀，并确认写入磁盘 (`--save`)
-通过 `-r` 替换字符串，通过 `-p` 添加前缀，加上 `--save` 将变更实际应用到磁盘：
-
+#### 示例 1.2：正则表达式匹配替换
+将 `./photos` 目录下的 `img_001.jpg` 格式通过正则重命名为 `pic_001.jpg`：
 ```bash
-bmv "./music/*.mp3" -r "_" " " --prefix "Music_" --save
-```
-
-### 3. 文件名大小写规范化
-将所有指定的文本文件文件名转换为 `Title` 格式（首字母大写）：
-
-```bash
-bmv "./docs/*.txt" --case title --save
-```
-
-### 4. 一键撤销上次重命名
-如果不小心改错了文件名，无需慌张，直接运行：
-
-```bash
-bmv undo
+bmv replace -p ./photos -e jpg -f r"img_(\d+)" -r r"pic_\1" --regex
 ```
 
 ---
 
-## 📖 命令行参数说明
+### 2. 🏢 风格转换与行业规范预设 (`bmv format`)
+
+#### 示例 2.1：连结风格转换 (Casing Style)
+将 `./docs` 目录下的文件名转换为 `kebab-case`（如 `My Draft File.txt` 转换为 `my-draft-file.txt`）：
+```bash
+bmv format -p ./docs -st kebab
+```
+
+#### 示例 2.2：媒体行业规范预设 (Media Preset)
+将 `./video` 目录下的视频文件按“项目_场景_日期_序号”格式自动编号重命名：
+```bash
+bmv format -p ./video -e mp4 -pr media --project "MV" --scene "SC02"
+# 生成文件名示例: MV_SC02_20260808_001.mp4
+```
+
+#### 示例 2.3：工程建设行业预设 (Engineering Preset)
+```bash
+bmv format -p ./drawings -pr eng --project "PROJ" --zone "Z01" --disc "ARC" --type "DWG"
+# 生成文件名示例: PROJ-Z01-ARC-DWG-001.dwg
+```
+
+---
+
+### 3. 🎲 随机/哈希安全重命名 (`bmv random`)
+
+#### 示例 3.1：短随机字符混淆（8位）
+```bash
+bmv random -p ./temp_files
+```
+
+#### 示例 3.2：基于文件内容生成 MD5 Hash 前 10 位重命名
+```bash
+bmv random -p ./images -e png -m hash -l 10
+```
+
+#### 示例 3.3：使用 UUID 重命名
+```bash
+bmv random -p ./data -m uuid
+```
+
+---
+
+## 📖 命令行手册
 
 ```text
-用法: bmv [PATTERN] [选项] [COMMAND]
+用法: bmv [COMMAND] [OPTIONS]
 
-主命令参数:
-  PATTERN                     目标文件匹配模式 (支持 Glob 通配符，如 './videos/*.mp4')
+命令列表:
+  replace   🔤 字符串/正则表达式 批量替换模式
+  format    🏢 行业规范化预设 / 连结风格转换 (按 时间>大小 排序递增编号)
+  random    🎲 文件名混淆/安全随机重命名
 
-选项:
-  -d, --delete TEXT           待从文件名中删除的字符或词组 (支持传入多个)
-  -r, --replace OLD NEW       替换字符串，格式: 旧字符串 新字符串
-  -p, --prefix TEXT           添加到文件名开头的字符串
-  -s, --suffix TEXT           添加到文件名结尾的字符串
-  -c, --case [upper|lower|title]
-                              大小写转换模式 (全部大写 / 全部小写 / 首字母大写)
-  --save                      确认将修改写入磁盘 (未加该参数时默认仅预览)
-  --help                      显示帮助信息并退出
+通用选项 (支持所有子命令):
+  -p, --path PATH             目标目录路径 (默认: ./)
+  -e, --ext TEXT              扩展名过滤 (例如: txt, mp4)
+  --reverse                   倒序排列 (默认按 时间>大小 正序)
+  -y, --confirm               开启交互式确认提示
+  -d, --dry-run               仅预览变更结果，不真正修改文件
 
-子命令:
-  undo                        一键撤销上一次的重命名操作
+replace 命令选项:
+  -f, --find TEXT             待查找/替换的字符串或正则表达式
+  -r, --replace TEXT          替换后的字符串
+  --regex                     开启正则表达式匹配模式
+
+format 命令选项:
+  -pr, --preset [media|eng|fin|academic]
+                              行业规范预设模式
+  -st, --style [kebab|snake|camel|pascal]
+                              连结风格转换模式
+  --project / --scene / --dept / --type / --author / --disc / --zone
+                              预设自定义字段参数
+
+random 命令选项:
+  -m, --mode [short|uuid|hash]
+                              随机模式 (默认: short)
+  -l, --length INTEGER        随机字符或 Hash 截取长度 (默认: 8)
 ```
-
----
-
-## 🛠️ 架构与安全设计
-
-```text
- 用户输入命令 
-      │
-      ▼
- 1. Glob 文件匹配  ──►  2. 构建 Pipeline 管道链  ──►  3. 内存计算新文件名
-                                                            │
-  撤销回滚 (bmv undo) ◄── 5. 写入 Undo 日志 ◄── 4. 事务安全校验 (校验重名/冲突)
-```
-
-1. **绝对隔离**：核心算法层（`core.py`）只负责路径计算与逻辑处理，不与 CLI 交互层耦合，确保高测试覆盖性。
-2. **原子防护**：如果在批量改名过程中发生意外（如磁盘空间不足、文件系统权限错误），事务控制器会自动触发**局部回滚机制**，将已改名的文件还原，防止文件系统处于中间混乱状态。
 
 ---
 
